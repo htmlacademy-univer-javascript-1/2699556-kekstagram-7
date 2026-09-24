@@ -11,14 +11,12 @@ const isPalindrome = (string) => {
   return normalized === reversed;
 };
 
-
 const extractDigits = (value) => {
   const string = value.toString();
   let digits = '';
 
   for (let i = 0; i < string.length; i++) {
     const symbol = parseInt(string[i], 10);
-
     if (!Number.isNaN(symbol)) {
       digits += string[i];
     }
@@ -27,3 +25,4 @@ const extractDigits = (value) => {
   return parseInt(digits, 10);
 };
 
+export { isStringLengthValid, isPalindrome, extractDigits };
