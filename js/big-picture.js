@@ -8,7 +8,13 @@ const socialCommentCountElement = bigPictureElement.querySelector('.social__comm
 const commentsLoaderElement = bigPictureElement.querySelector('.comments-loader');
 const cancelButton = bigPictureElement.querySelector('.big-picture__cancel');
 
-// Создание одного комментария по требуемой разметке
+const COMMENTS_PER_PORTION = 5;
+
+let currentComments = [];      // массив комментариев текущей фотографии
+let shownCommentsCount = 0;    // сколько уже показано
+
+// --- Создание одного комментария ---
+
 const createCommentElement = ({ avatar, name, message }) => {
   const li = document.createElement('li');
   li.classList.add('social__comment');
@@ -28,7 +34,42 @@ const createCommentElement = ({ avatar, name, message }) => {
   return li;
 };
 
-// Заполнение окна данными конкретной фотографии
+// --- Отрисовка следующей порции комментариев ---
+
+const renderNextCommentsPortion = () => {
+  const fragment = document.createDocumentFragment();
+  const nextPortion = currentComments.slice(
+    shownCommentsCount,
+    shownCommentsCount + COMMENTS_PER_PORTION
+  );
+
+  nextPortion.forEach((comment) => {
+    fragment.append(createCommentElement(comment));
+  });
+
+  socialCommentsElement.append(fragment);
+  shownCommentsCount += nextPortion.length;
+
+  // Обновляем счётчик «N из M комментариев»
+  socialCommentCountElement.innerHTML =
+    `${shownCommentsCount} из <span class="comments-count">${currentComments.length}</span> комментариев`;
+
+  // Если показали все — прячем кнопку
+  if (shownCommentsCount >= currentComments.length) {
+    commentsLoaderElement.classList.add('hidden');
+  }
+};
+
+// --- Обработчик кнопки «Загрузить ещё» ---
+
+const onCommentsLoaderClick = () => {
+  renderNextCommentsPortion();
+};
+
+commentsLoaderElement.addEventListener('click', onCommentsLoaderClick);
+
+// --- Заполнение окна ---
+
 const fillBigPicture = ({ url, description, likes, comments }) => {
   bigPictureImg.src = url;
   bigPictureImg.alt = description;
@@ -37,20 +78,26 @@ const fillBigPicture = ({ url, description, likes, comments }) => {
   commentsCountElement.textContent = comments.length;
   socialCaptionElement.textContent = description;
 
-  // Перерисовываем список комментариев
+  // Сбрасываем состояние перед показом новой фотографии
+  currentComments = comments;
+  shownCommentsCount = 0;
   socialCommentsElement.innerHTML = '';
-  const fragment = document.createDocumentFragment();
-  comments.forEach((comment) => {
-    fragment.append(createCommentElement(comment));
-  });
-  socialCommentsElement.append(fragment);
 
-  // По заданию: прячем счётчик и кнопку загрузки
-  socialCommentCountElement.classList.add('hidden');
-  commentsLoaderElement.classList.add('hidden');
+  // Показываем блоки счётчика и загрузчика
+  socialCommentCountElement.classList.remove('hidden');
+  commentsLoaderElement.classList.remove('hidden');
+
+  // Если комментариев меньше порции — сразу прячем кнопку
+  if (comments.length <= COMMENTS_PER_PORTION) {
+    commentsLoaderElement.classList.add('hidden');
+  }
+
+  // Рисуем первую порцию
+  renderNextCommentsPortion();
 };
 
-// Закрытие по Escape
+// --- Открытие/закрытие окна ---
+
 const onDocumentKeydown = (evt) => {
   if (evt.key === 'Escape') {
     evt.preventDefault();
@@ -58,20 +105,16 @@ const onDocumentKeydown = (evt) => {
   }
 };
 
-// Открытие окна
 const openBigPicture = (photo) => {
   fillBigPicture(photo);
   bigPictureElement.classList.remove('hidden');
   document.body.classList.add('modal-open');
-
   document.addEventListener('keydown', onDocumentKeydown);
 };
 
-// Закрытие окна
 function closeBigPicture() {
   bigPictureElement.classList.add('hidden');
   document.body.classList.remove('modal-open');
-
   document.removeEventListener('keydown', onDocumentKeydown);
 }
 
