@@ -1,16 +1,13 @@
-import { photos } from './data.js';
+// js/render-pictures.js
 import { openBigPicture } from './big-picture.js';
 
-const pictureTemplate = document.querySelector('#picture')
-  .content
-  .querySelector('.picture');
-
+const pictureTemplate = document.querySelector('#picture').content.querySelector('.picture');
 const picturesContainer = document.querySelector('.pictures');
 
 const createPicture = (photo) => {
   const { url, description, likes, comments } = photo;
-
   const pictureElement = pictureTemplate.cloneNode(true);
+
   const image = pictureElement.querySelector('.picture__img');
   image.src = url;
   image.alt = description;
@@ -20,18 +17,21 @@ const createPicture = (photo) => {
 
   pictureElement.addEventListener('click', (evt) => {
     evt.preventDefault();
-    openBigPicture(photo);
+    openBigPicture(photo); // Передаем весь объект с сервера
   });
 
   return pictureElement;
 };
 
-const renderPictures = (items) => {
+const renderPictures = (photos) => {
+  // Очищаем контейнер перед отрисовкой (если вызывается повторно)
+  picturesContainer.querySelectorAll('.picture').forEach((el) => el.remove());
+
   const fragment = document.createDocumentFragment();
-  items.forEach((item) => fragment.append(createPicture(item)));
+  photos.forEach((photo) => {
+    fragment.append(createPicture(photo));
+  });
   picturesContainer.append(fragment);
 };
 
 export { renderPictures };
-
-renderPictures(photos);
