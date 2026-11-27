@@ -1,5 +1,7 @@
 // js/upload-form.js
 
+import { resetEditor } from './image-editor.js';
+
 const uploadForm = document.querySelector('.img-upload__form');
 const uploadInput = uploadForm.querySelector('.img-upload__input');
 const uploadOverlay = uploadForm.querySelector('.img-upload__overlay');
@@ -12,15 +14,21 @@ const descriptionInput = uploadForm.querySelector('.text__description');
 function closeUploadForm() {
   uploadOverlay.classList.add('hidden');
   document.body.classList.remove('modal-open');
+  // Сброс значения поля выбора файла
   uploadInput.value = '';
+  // Сброс остальных полей формы
   uploadForm.reset();
-  document.removeEventListener('keydown', onDocumentKeydown); // Теперь ESLint видит, что эта функция будет объявлена
+  // Сброс масштаба и эффектов
+  resetEditor();
+  // Снимаем обработчик Esc
+  document.removeEventListener('keydown', onDocumentKeydown);
 }
 
 function onDocumentKeydown(evt) {
+  // Если фокус в поле ввода, Esc не закрывает форму
   if (evt.key === 'Escape' && document.activeElement !== hashtagsInput && document.activeElement !== descriptionInput) {
     evt.preventDefault();
-    closeUploadForm(); // И здесь тоже всё отлично
+    closeUploadForm();
   }
 }
 
@@ -56,7 +64,7 @@ const validateHashtags = (value) => {
 
   for (let i = 0; i < hashtags.length; i++) {
     const tag = hashtags[i];
-    // Начинается с #, длина от 2 до 20, только буквы и числа
+    // Начинается с #, длина от 2 до 20, только буквы и цифры
     if (!/^#[a-zа-яё0-9]{1,19}$/i.test(tag)) {
       return false;
     }
@@ -103,6 +111,6 @@ uploadForm.addEventListener('submit', (evt) => {
   const isValid = pristine.validate();
   if (isValid) {
     // Здесь в будущем будет AJAX-запрос
-    // uploadForm.submit(); // Если хотим стандартную отправку (но тогда страница перезагрузится)
+    // uploadForm.submit(); // Если хотим стандартную отправку
   }
 });
