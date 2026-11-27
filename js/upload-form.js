@@ -1,7 +1,8 @@
 // js/upload-form.js
+
 import { resetEditor } from './image-editor.js';
 import { sendData } from './api.js';
-import { showSuccessMessage, showErrorMessage } from './messages.js'; // Создадим этот модуль ниже
+import { showSuccessMessage, showErrorMessage } from './messages.js';
 
 const uploadForm = document.querySelector('.img-upload__form');
 const uploadInput = uploadForm.querySelector('.img-upload__input');
@@ -11,18 +12,33 @@ const submitButton = uploadForm.querySelector('.img-upload__submit');
 const hashtagsInput = uploadForm.querySelector('.text__hashtags');
 const descriptionInput = uploadForm.querySelector('.text__description');
 
-// --- Управление формой ---
+// Элементы для предпросмотра
+const imgUploadPreview = document.querySelector('.img-upload__preview img');
+const effectPreviews = document.querySelectorAll('.effects__preview');
+
+// --- Управление открытием и закрытием ---
 
 function closeUploadForm() {
   uploadOverlay.classList.add('hidden');
   document.body.classList.remove('modal-open');
+  // Сброс значения поля выбора файла
   uploadInput.value = '';
+  // Сброс остальных полей формы
   uploadForm.reset();
-  resetEditor(); // Сброс масштаба и эффектов
+  // Сброс масштаба и эффектов
+  resetEditor();
+  // Возвращаем стандартную картинку-заглушку
+  imgUploadPreview.src = 'img/upload-default-image.jpg';
+  // Очищаем превью эффектов
+  effectPreviews.forEach((preview) => {
+    preview.style.backgroundImage = '';
+  });
+  // Снимаем обработчик Esc
   document.removeEventListener('keydown', onDocumentKeydown);
 }
 
 function onDocumentKeydown(evt) {
+  // Если фокус в поле ввода, Esc не закрывает форму
   if (evt.key === 'Escape' && document.activeElement !== hashtagsInput && document.activeElement !== descriptionInput) {
     evt.preventDefault();
     closeUploadForm();
@@ -32,39 +48,45 @@ function onDocumentKeydown(evt) {
 const openUploadForm = () => {
   uploadOverlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
+  // Вешаем обработчик Esc
   document.addEventListener('keydown', onDocumentKeydown);
 };
 
-uploadInput.addEventListener('change', openUploadForm);
+// --- Логика загрузки и отображения выбранного файла ---
+
+const onFileInputChange = () => {
+  const file = uploadInput.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      // Подставляем картинку в окно предпросмотра
+      imgUploadPreview.src = reader.result;
+      // Подставляем картинку в миниатюры эффектов
+      effectPreviews.forEach((preview) => {
+        preview.style.backgroundImage = `url('${reader.result}')`;
+      });
+    });
+    reader.readAsDataURL(file);
+  }
+};
+
+// Событие выбора файла
+uploadInput.addEventListener('change', () => {
+  onFileInputChange();
+  openUploadForm();
+});
+
+// Событие клика по кнопке закрытия
 uploadCancel.addEventListener('click', closeUploadForm);
 
-// --- Отправка формы ---
 
-const blockSubmitButton = () => {
-  submitButton.disabled = true;
-  submitButton.textContent = 'Отправляю...';
-};
-
-const unblockSubmitButton = () => {
-  submitButton.disabled = false;
-  submitButton.textContent = 'Опубликовать';
-};
-
-// --- Настройка Pristine ---
-
-const pristine = new Pristine(uploadForm, {
-  classTo: 'img-upload__field-wrapper',
-  errorClass: 'img-upload__field-wrapper--invalid',
-  successClass: 'img-upload__field-wrapper--valid',
-  errorTextParent: 'img-upload__field-wrapper',
-  errorTextTag: 'div',
-  errorTextClass: 'img-upload__error'
-});
+// --- Валидация хэш-тегов ---
 
 const validateHashtags = (value) => {
   if (!value.trim()) {
     return true;
   }
+
   const hashtags = value.toLowerCase().split(' ').filter((tag) => tag !== '');
   if (hashtags.length > 5) {
     return false;
@@ -83,6 +105,17 @@ const validateHashtags = (value) => {
   return true;
 };
 
+// --- Настройка Pristine ---
+
+const pristine = new Pristine(uploadForm, {
+  classTo: 'img-upload__field-wrapper',
+  errorClass: 'img-upload__field-wrapper--invalid',
+  successClass: 'img-upload__field-wrapper--valid',
+  errorTextParent: 'img-upload__field-wrapper',
+  errorTextTag: 'div',
+  errorTextClass: 'img-upload__error'
+});
+
 pristine.addValidator(
   hashtagsInput,
   validateHashtags,
@@ -97,16 +130,27 @@ pristine.addValidator(
   'Комментарий не может быть длиннее 140 символов'
 );
 
+// --- Отправка формы ---
+
+const blockSubmitButton = () => {
+  submitButton.disabled = true;
+  submitButton.textContent = 'Отправляю...';
+};
+
+const unblockSubmitButton = () => {
+  submitButton.disabled = false;
+  submitButton.textContent = 'Опубликовать';
+};
+
 uploadForm.addEventListener('submit', (evt) => {
   evt.preventDefault();
   const isValid = pristine.validate();
   if (isValid) {
     blockSubmitButton();
-    // Собираем данные формы (включая файл) в FormData
     const formData = new FormData(uploadForm);
     sendData(formData)
       .then(() => {
-        closeUploadForm(); // Очищаем и закрываем
+        closeUploadForm();
         showSuccessMessage();
       })
       .catch(() => {
